@@ -1,15 +1,21 @@
 import * as THREE from 'three'
+import { AnimationMixer } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import Player from '../entities/player';
+// import Scene from './scene';
 
 class World {
 
     private _threejs: any
     private _camera: any
     private _scene: any
+    private _mixer : any
 
     constructor() {
-        this._Initialize();
+        // super()
+        this._Initialize()
     }
 
     _Initialize() {
@@ -82,45 +88,72 @@ class World {
         plane.rotation.x = -Math.PI / 2;
         this._scene.add(plane);
 
-        const box = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 2, 2),
-            new THREE.MeshStandardMaterial({
-                color: 0xFFFFFF,
-            }));
-        box.position.set(0, 1, 0);
-        box.castShadow = true;
-        box.receiveShadow = true;
-        this._scene.add(box);
+        // const box = new THREE.Mesh(
+        //     new THREE.BoxGeometry(2, 2, 2),
+        //     new THREE.MeshStandardMaterial({
+        //         color: 0xFFFFFF,
+        //     }));
+        // box.position.set(0, 1, 0);
+        // box.castShadow = true;
+        // box.receiveShadow = true;
+        // this._scene.add(box);
 
-        for (let x = -8; x < 8; x++) {
-            for (let y = -8; y < 8; y++) {
-                const box = new THREE.Mesh(
-                    new THREE.BoxGeometry(2, 2, 2),
-                    new THREE.MeshStandardMaterial({
-                        color: 0x808080,
-                    }));
-                box.position.set(Math.random() + x * 5, Math.random() * 4.0 + 2.0, Math.random() + y * 5);
-                box.castShadow = true;
-                box.receiveShadow = true;
-                this._scene.add(box);
+        // for (let x = -8; x < 8; x++) {
+        //     for (let y = -8; y < 8; y++) {
+        //         const box = new THREE.Mesh(
+        //             new THREE.BoxGeometry(2, 2, 2),
+        //             new THREE.MeshStandardMaterial({
+        //                 color: 0x808080,
+        //             }));
+        //         box.position.set(Math.random() + x * 5, Math.random() * 4.0 + 2.0, Math.random() + y * 5);
+        //         box.castShadow = true;
+        //         box.receiveShadow = true;
+        //         this._scene.add(box);
+        //     }
+        // }
+
+
+        // const gltfLoader = new GLTFLoader();
+
+        // gltfLoader.load('./assets/scene.gltf', (gltf) => {
+        // gltf.scene.scale.set(50, 50, 50)
+        // gltf.scene.position.set(0, 25, 0)
+        // gltf.scene.castShadow = true;
+        // gltf.scene.receiveShadow = true;
+        // this._scene.add(gltf.scene);
+
+        // }, undefined, function (error) {
+
+        //     console.error(error);
+
+        // });
+
+        // const player: Player = new Player('./assets/scene.gltf', (gltf : GLTF) => {
+        //     gltf.scene.scale.set(50, 50, 50)
+        //     gltf.scene.position.set(0, 25, 0)
+        //     gltf.scene.traverse(c => c.castShadow = true)
+        //     this._scene.add(gltf.scene);
+        // }, this._scene)
+
+        const fbxloader = new FBXLoader()
+        fbxloader.setPath('./assets/zombie/')
+        fbxloader.load(
+            'mremireh_o_desbiens.fbx',
+            (fbx) => {
+                fbx.scale.setScalar(0.1)
+                fbx.traverse(c => c.castShadow = true)
+
+                const anim = new FBXLoader()
+                anim.setPath('./assets/zombie/')
+                anim.load('Hip Hop Dancing.fbx', anim => {
+                    this._mixer = new AnimationMixer(fbx)
+                    const idle = this._mixer.clipAction(anim.animations[0])
+                    idle.play()
+                })
+
+                this._scene.add(fbx)
             }
-        }
-
-
-        const gltfLoader = new GLTFLoader();
-
-        gltfLoader.load('./assets/scene.gltf', (gltf) => {
-            gltf.scene.scale.set(50, 50, 50)
-            gltf.scene.position.set(0, 25, 0)
-            gltf.scene.castShadow = true;
-            gltf.scene.receiveShadow = true;
-            this._scene.add(gltf.scene);
-
-        }, undefined, function (error) {
-
-            console.error(error);
-
-        });
+        )
 
         this._RAF();
     }
