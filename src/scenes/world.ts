@@ -12,6 +12,7 @@ class World {
     private _scene: THREE.Scene
     private _mixer?: THREE.AnimationMixer
     private _playerModel?: THREE.Object3D<THREE.Event>
+    private _buildingModel? : THREE.Object3D<THREE.Event>
     private _clock: THREE.Clock
     private _controls?: OrbitControls
     private _keysPressed: { [key: string]: boolean }
@@ -176,6 +177,7 @@ class World {
             
             model.scale.set(10, 10, 10)
             model.position.set(-50, 0, -50)
+            this._buildingModel = model
             this._scene.add(model)
         })
     }
@@ -234,6 +236,11 @@ class World {
             this._raycaster.setFromCamera(this._mouse, this._camera);
             if (this._mixer !== undefined) this._mixer.update(this._clock.getDelta())
             if (this._characterControls) this._characterControls._Update(this._clock.getDelta(), this._keysPressed)
+            if(this._buildingModel !== undefined){
+                this._buildingModel.rotation.y += 0.03;
+                this._buildingModel.position.x = 20*Math.cos(0) + 0;
+                this._buildingModel.position.z = 20*Math.sin(0) + 0;
+            }
             this._renderer.render(this._scene, this._camera);
             this._RAF();
         });
