@@ -1,8 +1,9 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import * as THREE from 'three'
 import CharacterControls from '../controls/characterControls';
-import { Raycaster, Vector2 } from 'three';
+import { Raycaster, Vector2, AnimationMixer } from 'three';
 
 class World {
 
@@ -45,19 +46,31 @@ class World {
         this._Skybox()
         this._Plane()
         this._LoadAnimatedModel()
+        this._LoadBuildings()
 
         this._RAF()
     }
 
     private _AddListeners() {
+        // Resizes the screen properly
         window.addEventListener('resize', () => {
             this._OnWindowResize();
         }, false);
 
+        // sets the x and y of the mouse 
         window.addEventListener('mousedown', (e) => {
             this._mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             this._mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
         }, false)
+
+        // Gets the intersected objects and opens the url of the intersected object
+        window.addEventListener('click', (e) => {
+            const intersects = this._raycaster.intersectObjects(this._scene.children);
+            for (let i = 0; i < intersects.length; i++) {
+                window.open(intersects[i].object.userData.URL);
+                (<THREE.MeshStandardMaterial>(<THREE.Mesh>intersects[i].object).material).color.set(0xff0000)
+            }
+        })
 
         window.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.shiftKey && this._characterControls) {
@@ -129,11 +142,42 @@ class World {
             new THREE.MeshStandardMaterial({
                 color: 0xFFFFFF,
             }));
+        plane.userData = { URL: 'https://google.com' }
         plane.castShadow = false;
         plane.receiveShadow = true;
         plane.rotation.x = -Math.PI / 2;
         this._scene.add(plane);
 
+    }
+
+    private _LoadBuildings() {
+        // const geometry = new THREE.BoxGeometry(100, 100, 100)
+        // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        // const rect = new THREE.Mesh(geometry, material);
+        // rect.position.set(50, 0, 50)
+        // this._scene.add(rect);
+        const loader = new GLTFLoader()
+        loader.load('./assets/building/scene.gltf', (gltf) => {
+            const model = gltf.scene
+            model.traverse(c => {
+                c.castShadow = true
+            })
+            model.scale.set(10, 10, 10)
+            model.position.set(-50, 0, 50)
+            this._scene.add(model)
+        })
+
+        const loader2 = new GLTFLoader()
+        loader2.load('./assets/building/scene.gltf', (gltf) => {
+            const model = gltf.scene
+            model.traverse(c => {
+                c.castShadow = true
+            })
+            
+            model.scale.set(10, 10, 10)
+            model.position.set(-50, 0, -50)
+            this._scene.add(model)
+        })
     }
 
     private _LoadAnimatedModel() {
@@ -169,12 +213,11 @@ class World {
         //     danceAnim.setPath('./assets/zombie/')
         //     danceAnim.load('Hip Hop Dancing.fbx', anim => {
         //         this._mixer = new AnimationMixer(fbx)
-        //         const idle = this._mixer.clipAction(anim.animations[0])
+        //         const idle = this._mixer?.clipAction(anim.animations[0])
         //         idle.play()
         //     })
 
-
-        //     this._model = fbx.children[0]
+        //     fbx.position.set(50, 0, 50)
         //     this._scene.add(fbx)
         // })
 
@@ -189,10 +232,6 @@ class World {
     private _RAF() {
         requestAnimationFrame(() => {
             this._raycaster.setFromCamera(this._mouse, this._camera);
-            const intersects = this._raycaster.intersectObjects(this._scene.children);
-            for (let i = 0; i < intersects.length; i++) {
-                (<THREE.MeshStandardMaterial>(<THREE.Mesh>intersects[i].object).material).color.set(0xff0000)
-            }
             if (this._mixer !== undefined) this._mixer.update(this._clock.getDelta())
             if (this._characterControls) this._characterControls._Update(this._clock.getDelta(), this._keysPressed)
             this._renderer.render(this._scene, this._camera);
