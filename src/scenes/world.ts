@@ -3,7 +3,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import * as THREE from 'three'
 import CharacterControls from '../controls/characterControls';
-import { Raycaster, Vector2, AnimationMixer } from 'three';
+import { Raycaster, Vector2, AnimationMixer, Object3D } from 'three';
+import { Water } from 'three/examples/jsm/objects/Water.js';
+import { Sky } from 'three/examples/jsm/objects/Sky.js'
 
 class World {
 
@@ -12,13 +14,14 @@ class World {
     private _scene: THREE.Scene
     private _mixer?: THREE.AnimationMixer
     private _playerModel?: THREE.Object3D<THREE.Event>
-    private _buildingModel? : THREE.Object3D<THREE.Event>
+    private _buildingModel?: THREE.Object3D<THREE.Event>
     private _clock: THREE.Clock
     private _controls?: OrbitControls
     private _keysPressed: { [key: string]: boolean }
     private _characterControls?: CharacterControls;
     private _raycaster: Raycaster
     private _mouse: Vector2
+    private _pivotPoint?: Object3D
 
     constructor() {
         this._renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -48,8 +51,79 @@ class World {
         this._Plane()
         this._LoadAnimatedModel()
         this._LoadBuildings()
+        this._LoadRotatingObjectAroundPivot()
+        this._LoadText()
 
         this._RAF()
+    }
+
+    private _LoadText() {
+        const loader = new THREE.FontLoader()
+        loader.load('https://cdn.rawgit.com/mrdoob/three.js/master/examples/fonts/helvetiker_regular.typeface.json', (font :any) => {
+
+            const geometry = new THREE.TextGeometry('Hello three.js!', {
+              font: font,
+              size: 80,
+              height: 5,
+              curveSegments: 12,
+              bevelEnabled: true,
+              bevelThickness: 10,
+              bevelSize: 8,
+              bevelSegments: 5
+            });
+        
+            const material = new THREE.MeshLambertMaterial({
+              color: 0xF3FFE2
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(0, 2, 0);
+            mesh.scale.multiplyScalar(0.01)
+            mesh.castShadow = true;
+            this._scene.add(mesh);
+        
+        
+            const canv = document.createElement('canvas')
+            canv.width = canv.height = 256;
+            const ctx = canv.getContext('2d')
+            if(ctx !== null){
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canv.width, canv.height);
+                ctx.fillStyle = 'black'
+                ctx.fillText("HERE IS SOME 2D TEXT", 20, 20);
+            }
+            var tex = new THREE.Texture(canv);
+            tex.needsUpdate = true;
+            var mat = new THREE.MeshBasicMaterial({
+              map: tex
+            });
+            var plane = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), mat);
+            this._scene.add(plane)
+          });
+        
+    }
+
+    private _LoadRotatingObjectAroundPivot() {
+        const geometry = new THREE.BoxGeometry(10, 10, 10)
+        const material = new THREE.MeshBasicMaterial({ opacity : 0.0, transparent : true});
+        const rect = new THREE.Mesh(geometry, material);
+        this._scene.add(rect);
+        this._pivotPoint = new THREE.Object3D()
+        rect.add(this._pivotPoint)
+        const sphereGeometry2 = new THREE.SphereBufferGeometry(30, 20, 20);
+
+        // Sphere Material 2
+        const sphereMaterial2 = new THREE.MeshLambertMaterial({
+            color: 0x6ed3cf
+        });
+
+        // Sphere Mesh 2
+        const sphereMesh2 = new THREE.Mesh(sphereGeometry2, sphereMaterial2);
+
+        // Position from pivot point to sphere 2
+        sphereMesh2.position.set(500, 4, 6);
+
+        // make the pivotpoint the sphere's parent.
+        this._pivotPoint.add(sphereMesh2);
     }
 
     private _AddListeners() {
@@ -148,18 +222,37 @@ class World {
         plane.receiveShadow = true;
         plane.rotation.x = -Math.PI / 2;
         this._scene.add(plane);
+        // const waterGeometry = new THREE.PlaneGeometry(10000, 10000);
+
+        // const water = new Water(
+        //     waterGeometry,
+        //     {
+        //         textureWidth: 512,
+        //         textureHeight: 512,
+        //         waterNormals: new THREE.TextureLoader().load('textures/waternormals.jpg', function (texture) {
+
+        //             texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+        //         }),
+        //         sunDirection: new THREE.Vector3(),
+        //         sunColor: 0xffffff,
+        //         waterColor: 0x001e0f,
+        //         distortionScale: 3.7,
+        //         fog: this._scene.fog !== undefined
+        //     }
+        // );
+
+        // water.rotation.x = - Math.PI / 2;
+
+        // this._scene.add(water);
 
     }
 
     private _LoadBuildings() {
-        // const geometry = new THREE.BoxGeometry(100, 100, 100)
-        // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        // const rect = new THREE.Mesh(geometry, material);
-        // rect.position.set(50, 0, 50)
-        // this._scene.add(rect);
         const loader = new GLTFLoader()
         loader.load('./assets/building/scene.gltf', (gltf) => {
             const model = gltf.scene
+
             model.traverse(c => {
                 c.castShadow = true
             })
@@ -168,18 +261,18 @@ class World {
             this._scene.add(model)
         })
 
-        const loader2 = new GLTFLoader()
-        loader2.load('./assets/building/scene.gltf', (gltf) => {
-            const model = gltf.scene
-            model.traverse(c => {
-                c.castShadow = true
-            })
-            
-            model.scale.set(10, 10, 10)
-            model.position.set(-50, 0, -50)
-            this._buildingModel = model
-            this._scene.add(model)
-        })
+        // const loader2 = new GLTFLoader()
+        // loader2.load('./assets/building/scene.gltf', (gltf) => {
+        //     const model = gltf.scene
+        //     model.traverse(c => {
+        //         c.castShadow = true
+        //     })
+
+        //     model.scale.set(10, 10, 10)
+        //     model.position.set(-50, 0, -50)
+        //     this._buildingModel = model
+        //     this._scene.add(model)
+        // })
     }
 
     private _LoadAnimatedModel() {
@@ -222,7 +315,6 @@ class World {
         //     fbx.position.set(50, 0, 50)
         //     this._scene.add(fbx)
         // })
-
     }
 
     private _OnWindowResize() {
@@ -236,11 +328,12 @@ class World {
             this._raycaster.setFromCamera(this._mouse, this._camera);
             if (this._mixer !== undefined) this._mixer.update(this._clock.getDelta())
             if (this._characterControls) this._characterControls._Update(this._clock.getDelta(), this._keysPressed)
-            if(this._buildingModel !== undefined){
+            if (this._buildingModel !== undefined) {
                 this._buildingModel.rotation.y += 0.03;
-                this._buildingModel.position.x = 20*Math.cos(0) + 0;
-                this._buildingModel.position.z = 20*Math.sin(0) + 0;
+                this._buildingModel.position.x = 20 * Math.cos(0) + 0;
+                this._buildingModel.position.z = 20 * Math.sin(0) + 0;
             }
+            if (this._pivotPoint !== undefined) this._pivotPoint.rotation.y += 0.05;
             this._renderer.render(this._scene, this._camera);
             this._RAF();
         });
